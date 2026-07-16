@@ -24,6 +24,26 @@ func (m model) renderBoard() string {
 
 	for i := 0; i < game.Rows; i++ {
 		for j := 0; j < game.Cols; j++ {
+			flashStyle := lipgloss.NewStyle().
+				Foreground(lipgloss.Color("15"))
+
+			if j == 0 || j == game.Cols-1 {
+				board.WriteString("|")
+				continue
+			}
+
+			if m.game.GetGameState() == game.Clearing &&
+				m.game.IsClearRow(i) {
+
+				if m.game.GetClearRowTick()%2 == 0 {
+					board.WriteString(flashStyle.Render("██"))
+				} else {
+					board.WriteString("  ")
+				}
+
+				continue
+			}
+
 			cell := tempBoard[i][j]
 			switch cell.Val {
 
@@ -37,7 +57,7 @@ func (m model) renderBoard() string {
 				board.WriteString("--")
 
 			case game.VerticalBoundary:
-				board.WriteString("| ")
+				board.WriteString("|")
 
 			default:
 				board.WriteString("  ")

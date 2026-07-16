@@ -19,10 +19,18 @@ func (g *Game) MoveDown() {
 	}
 
 	g.LockPiece()
+
+	g.clearRows = g.FindCompleteRows()
+
+	if len(g.clearRows) > 0 {
+		g.gameState = Clearing
+		return
+	}
+
 	g.SpawnNewPiece()
 
 	if !g.CanMove(0, 0) {
-		g.gameOver = true
+		g.gameState = GameOver
 	}
 }
 
@@ -52,10 +60,18 @@ func (g *Game) HardDrop() {
 	for g.CanMove(1, 0) {
 		g.activePiece.AnchorX++
 	}
-	g.LockPiece()
-	g.SpawnNewPiece()
 
+	g.LockPiece()
+
+	g.clearRows = g.FindCompleteRows()
+
+	if len(g.clearRows) > 0 {
+		g.gameState = Clearing
+		return
+	}
+
+	g.SpawnNewPiece()
 	if !g.CanMove(0, 0) {
-		g.gameOver = true
+		g.gameState = GameOver
 	}
 }

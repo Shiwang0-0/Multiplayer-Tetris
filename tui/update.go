@@ -2,6 +2,7 @@ package tui
 
 import (
 	tea "charm.land/bubbletea/v2"
+	"github.com/Shiwang0-0/multiplayertetris/game"
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -17,9 +18,24 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	case tickMsg:
-		m.game.MoveDown()
-		return m, tick()
+	case FallTickMsg:
+		if m.game.GetGameState() == game.Playing {
+			m.game.MoveDown()
+		}
+
+		if m.game.GetGameState() == game.Clearing {
+			return m, clearRowTick()
+		}
+
+		return m, fallTick()
+
+	case RowClearTickMsg:
+		if m.game.GetGameState() == game.Clearing {
+			m.game.UpdateClearAnimation()
+			return m, clearRowTick()
+		}
+
+		return m, fallTick()
 
 	case tea.KeyPressMsg:
 
@@ -29,18 +45,25 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case "a":
-			m.game.MoveLeft()
+			if m.game.GetGameState() == game.Playing {
+				m.game.MoveLeft()
+			}
 
 		case "d":
-			m.game.MoveRight()
+			if m.game.GetGameState() == game.Playing {
+				m.game.MoveRight()
+			}
 
 		case "s":
-			m.game.MoveDown()
+			if m.game.GetGameState() == game.Playing {
+				m.game.MoveDown()
+			}
 
 		case "space":
-			m.game.HardDrop()
+			if m.game.GetGameState() == game.Playing {
+				m.game.HardDrop()
+			}
 		}
-
 	}
 	return m, nil
 }

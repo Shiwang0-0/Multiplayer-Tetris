@@ -3,13 +3,16 @@ package game
 type Game struct {
 	board       [Rows][Cols]Cell
 	activePiece Piece
-	gameOver    bool
+
+	clearRows    []int
+	clearRowTick int
+	gameState    GameState
 }
 
 func NewGame() *Game {
 	g := &Game{
-		board:    initializeBoard(),
-		gameOver: false,
+		board:     initializeBoard(),
+		gameState: Playing,
 	}
 	g.SpawnNewPiece()
 
@@ -45,5 +48,23 @@ func (g *Game) GetActivePiece() Piece {
 }
 
 func (g *Game) IsGameOver() bool {
-	return g.gameOver
+	return g.gameState == GameOver
+}
+
+func (g *Game) GetGameState() GameState {
+	return g.gameState
+}
+
+func (g *Game) GetClearRowTick() int {
+	return g.clearRowTick
+}
+
+func (g *Game) IsClearRow(r int) bool {
+	for _, row := range g.clearRows {
+		if row == r {
+			return true
+		}
+	}
+
+	return false
 }

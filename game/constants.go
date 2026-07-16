@@ -29,3 +29,11 @@ type Piece struct {
 	AnchorX int
 	AnchorY int
 }
+
+type GameState int
+
+const (
+	Playing GameState = iota
+	Clearing
+	GameOver
+)
