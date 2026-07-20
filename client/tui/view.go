@@ -10,7 +10,42 @@ import (
 
 func (m model) View() tea.View {
 
-	return tea.NewView(m.renderBoard())
+	switch m.screen {
+
+	case HomeScreen:
+		return tea.NewView(
+			"Multiplayer Tetris\n\n" +
+				"[C] Create Room\n" +
+				"[J] Join Room\n",
+		)
+
+	case CreateRoomScreen:
+		return tea.NewView(
+			"Create Room\n\n" +
+				"Room ID: " + m.roomID + "\n\n" +
+				"Enter: Create | Esc: Back",
+		)
+
+	case JoinRoomScreen:
+		return tea.NewView(
+			"Join Room\n\n" +
+				"Room ID: " + m.roomID + "\n\n" +
+				"Enter: Join | Esc: Back",
+		)
+
+	case WaitingScreen:
+		return tea.NewView(
+			"Waiting for players...\n\n" +
+				"Room ID: " + m.roomID + "\n\n" +
+				"Waiting for opponent...\n\n" +
+				"Press Enter to start...\n\n" +
+				"Press Esc to leave",
+		)
+
+	case GameScreen:
+		return tea.NewView(m.renderBoard())
+	}
+	return tea.NewView("")
 }
 
 func (m model) renderBoard() string {
