@@ -45,3 +45,17 @@ type OpponentMoveMsg struct {
 }
 
 func (OpponentMoveMsg) isMsg() {}
+
+type VotingStartMsg struct {
+	ActivePlayerID  int
+	DeadlineSeconds int
+}
+
+func (VotingStartMsg) isMsg() {}
+
+type TurnStartMsg struct {
+	ActivePlayerID int
+	Piece          string // "I", "O", "T", "L"
+}
+
+func (TurnStartMsg) isMsg() {}

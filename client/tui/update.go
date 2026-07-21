@@ -24,14 +24,16 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case FallTickMsg:
 		if m.game.GetGameState() == game.Playing {
-			m.game.MoveDown()
+			locked := m.game.MoveDown()
+			if locked {
+				return m, tea.Batch(fallTick(), m.sendCommand("DOWN"), m.sendCommand("LOCKED"))
+			}
+			return m, tea.Batch(fallTick(), m.sendCommand("DOWN"))
 		}
-
 		if m.game.GetGameState() == game.Clearing {
 			return m, clearRowTick()
 		}
-
-		return m, fallTick()
+		return m, nil
 
 	case RowClearTickMsg:
 		if m.game.GetGameState() == game.Clearing {
@@ -52,10 +54,47 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.screen = WaitingScreen
 		return m, nil
 
+	case protocol.VotingStartMsg:
+		m.screen = VotingScreen
+		m.activePlayerID = msg.ActivePlayerID
+		m.myVote = ""
+		m.voteSecondsLeft = msg.DeadlineSeconds
+		return m, voteCountdownTick()
+
+	case protocol.TurnStartMsg:
+		m.activePlayerID = msg.ActivePlayerID
+		if msg.ActivePlayerID == m.myID {
+			m.screen = GameScreen
+			m.game.SpawnNewPiece(msg.Piece)
+			return m, fallTick()
+		}
+		m.screen = SpectateScreen
+		if m.opponents == nil {
+			m.opponents = map[int]*game.Game{}
+		}
+		opp, ok := m.opponents[msg.ActivePlayerID]
+		if !ok {
+			opp = game.NewGame()
+			m.opponents[msg.ActivePlayerID] = opp
+		}
+		opp.SpawnNewPiece(msg.Piece) // keeps the spectated board's piece in sync with the real active board
+		return m, nil
+
+	case VoteCountdownTickMsg:
+		if m.screen != VotingScreen {
+			return m, nil // voting already ended (TURN_START arrived)
+		}
+		if m.voteSecondsLeft > 0 {
+			m.voteSecondsLeft--
+			return m, voteCountdownTick() // schedule next second
+		}
+
+		return m, nil // countdown finished
+
 	case protocol.ServerErrorMsg:
 		m.lastError = msg.Msg
-		if m.screen == WaitingScreen {
-			m.screen = HomeScreen // join/create failed — go back rather than hang on "waiting"
+		if m.screen == WaitingScreen && m.lastError != "waiting for more players" {
+			m.screen = HomeScreen
 		}
 		return m, nil
 
@@ -110,10 +149,33 @@ func (m model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleRoomInput(msg)
 
 	case WaitingScreen:
+		if !m.isCreator {
+			return m, nil // non-creators just wait for VOTING_START from the server
+		}
 		switch msg.String() {
 		case "enter":
-			m.screen = GameScreen
-			return m, fallTick()
+			return m, m.sendCommand("START_MATCH")
+		}
+		return m, nil
+
+	case VotingScreen:
+		if m.myID == m.activePlayerID {
+			return m, nil // active player just waits
+		}
+		var piece string
+		switch msg.String() {
+		case "1":
+			piece = "I"
+		case "2":
+			piece = "O"
+		case "3":
+			piece = "T"
+		case "4":
+			piece = "L"
+		}
+		if piece != "" && m.myVote == "" {
+			m.myVote = piece
+			return m, m.sendCommand("VOTE " + piece)
 		}
 		return m, nil
 	}
@@ -131,13 +193,15 @@ func (m model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		}
 	case "s":
 		if m.game.GetGameState() == game.Playing {
-			m.game.MoveDown()
+			if m.game.MoveDown() {
+				return m, tea.Batch(m.sendCommand("DOWN"), m.sendCommand("LOCKED"))
+			}
 			return m, m.sendCommand("DOWN")
 		}
 	case "space":
 		if m.game.GetGameState() == game.Playing {
 			m.game.HardDrop()
-			return m, m.sendCommand("DROP")
+			return m, tea.Batch(m.sendCommand("DROP"), m.sendCommand("LOCKED"))
 		}
 	}
 	return m, nil
@@ -165,8 +229,7 @@ func (m *model) handleRoomInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if m.screen == CreateRoomScreen {
-			fmt.Print("room: ", m.roomID)
-			// m.screen = WaitingScreen // new: "waiting for opponent" / "joining..."
+			m.isCreator = true
 			return m, m.sendCommand("CREATE_ROOM " + m.roomID)
 		}
 		// m.screen = WaitingScreen

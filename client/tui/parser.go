@@ -29,6 +29,10 @@ func ParseResponse(line string) tea.Msg {
 		return parseClientID(rest)
 	case "JOINED":
 		return parseJoined(rest)
+	case "VOTING_START":
+		return parseVotingStart(rest)
+	case "TURN_START":
+		return parseTurnStart(rest)
 	case "ERROR":
 		return parseError(rest)
 	default:
@@ -74,6 +78,39 @@ func parseOpponentMove(senderIDStr, move string) tea.Msg {
 	}
 }
 
+func parseVotingStart(data string) tea.Msg {
+
+	var activePlayerID int
+	var deadline int
+
+	_, err := fmt.Sscanf(data, "%d %d", &activePlayerID, &deadline)
+	if err != nil {
+		log.Println("Invalid VOITING_START response")
+		return nil
+	}
+	return protocol.VotingStartMsg{
+		ActivePlayerID:  activePlayerID,
+		DeadlineSeconds: deadline,
+	}
+}
+
+func parseTurnStart(data string) tea.Msg {
+	var activePlayerID int // who the active playing player is (who is getting the votes)
+	var winnerPiece string
+
+	_, err := fmt.Sscanf(data, "%d %s", &activePlayerID, &winnerPiece)
+	if err != nil {
+		log.Println("Invalid VOITING_START response")
+		return nil
+	}
+	return protocol.TurnStartMsg{
+		ActivePlayerID: activePlayerID,
+		Piece:          winnerPiece,
+	}
+}
+
 func parseError(data string) tea.Msg {
-	return protocol.ServerErrorMsg{Msg: data}
+	return protocol.ServerErrorMsg{
+		Msg: data,
+	}
 }

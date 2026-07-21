@@ -14,7 +14,7 @@ func NewGame() *Game {
 		board:     initializeBoard(),
 		gameState: Playing,
 	}
-	g.SpawnNewPiece()
+	// g.SpawnNewPiece()
 
 	return g
 }

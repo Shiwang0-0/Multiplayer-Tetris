@@ -71,8 +71,6 @@ func (cm *ConnectionManager) HandleConnectionRead(client Client, rm *RoomManager
 	for scanner.Scan() {
 		msg := scanner.Text() // removes the \n, so remember to add a \n at the last so that client can read
 		cmd := parseCommand(msg)
-		fmt.Println("msg", msg)
-		fmt.Println("cmd", cmd)
 		if cmd == nil {
 			response = "ERROR invalid command"
 			client.outChan <- protocol.ServerMsg{Msg: response} //  write error back to client
@@ -136,7 +134,6 @@ func (cm *ConnectionManager) Send(receiverID int, msg string) error {
 	if !strings.HasSuffix(msg, "\n") {
 		msg += "\n"
 	}
-	fmt.Println("send: ", msg)
 	select {
 	case client.outChan <- protocol.ServerMsg{Msg: msg}:
 		return nil

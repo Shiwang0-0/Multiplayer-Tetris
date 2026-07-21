@@ -34,6 +34,15 @@ func parseCommand(line string) Command {
 			return nil
 		}
 		return &joinRoomCommand{roomID: roomID}
+	case "VOTE":
+		if len(fields) < 2 {
+			return nil
+		}
+		return &voteCommand{piece: fields[1]}
+	case "START_MATCH":
+		return &startMatchCommand{}
+	case "LOCKED":
+		return &lockedCommand{}
 	}
 
 	return nil

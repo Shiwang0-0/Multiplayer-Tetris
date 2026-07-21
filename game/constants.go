@@ -35,5 +35,6 @@ type GameState int
 const (
 	Playing GameState = iota
 	Clearing
+	AwaitingTurn
 	GameOver
 )

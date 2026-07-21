@@ -12,26 +12,24 @@ func (g *Game) MoveRight() {
 	}
 }
 
-func (g *Game) MoveDown() {
+func (g *Game) MoveDown() bool {
 	if g.CanMove(1, 0) {
 		g.activePiece.AnchorX++
-		return
+		return false
 	}
+	g.lockAndAdvance()
+	return true
+}
 
+func (g *Game) lockAndAdvance() {
 	g.LockPiece()
-
 	g.clearRows = g.FindCompleteRows()
 
 	if len(g.clearRows) > 0 {
 		g.gameState = Clearing
 		return
 	}
-
-	g.SpawnNewPiece()
-
-	if !g.CanMove(0, 0) {
-		g.gameState = GameOver
-	}
+	g.gameState = AwaitingTurn
 }
 
 func (g *Game) CanMove(dx, dy int) bool {
@@ -60,18 +58,5 @@ func (g *Game) HardDrop() {
 	for g.CanMove(1, 0) {
 		g.activePiece.AnchorX++
 	}
-
-	g.LockPiece()
-
-	g.clearRows = g.FindCompleteRows()
-
-	if len(g.clearRows) > 0 {
-		g.gameState = Clearing
-		return
-	}
-
-	g.SpawnNewPiece()
-	if !g.CanMove(0, 0) {
-		g.gameState = GameOver
-	}
+	g.lockAndAdvance()
 }

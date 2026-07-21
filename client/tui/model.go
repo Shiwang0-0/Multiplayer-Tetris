@@ -8,15 +8,6 @@ import (
 
 type Screen int
 
-const (
-	HomeScreen Screen = iota
-	CreateRoomScreen
-	JoinRoomScreen
-	GameScreen
-	WaitingScreen
-	StartScreen
-)
-
 type model struct {
 	game *game.Game
 	conn net.Conn
@@ -27,8 +18,14 @@ type model struct {
 	// the game state for even the opponent is maintained for each client diffrently i.e no game state is shared and only the moves are shared, and each client replicates that move on their end
 	opponents map[int]*game.Game // each opponent id ---> each opponent game
 	roomID    string
+	isCreator bool // is room creator
+
 	lastError string
 	connected bool
+
+	voteSecondsLeft int // sets by the server message parsing : deadline field
+	myVote          string
+	activePlayerID  int
 }
 
 func NewModel(g *game.Game, conn net.Conn) *model {

@@ -80,17 +80,22 @@ func (g *Game) UpdateClearAnimation() {
 		g.clearRows = nil
 		g.clearRowTick = 0
 
-		g.SpawnNewPiece()
+		// g.SpawnNewPiece()
 		g.gameState = Playing
 	}
 }
 
-func (g *Game) SpawnNewPiece() {
+func (g *Game) SpawnNewPiece(p string) {
 	piece := Piece{
-		Shape:   GetShape(),
+		Shape:   GetShape(p),
 		ColorID: GetColor(),
 		AnchorX: 1,
 		AnchorY: Cols / 2,
 	}
 	g.activePiece = piece
+	g.gameState = Playing
+
+	if !g.CanMove(0, 0) {
+		g.gameState = GameOver
+	}
 }
