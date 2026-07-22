@@ -81,8 +81,18 @@ func (g *Game) UpdateClearAnimation() {
 		g.clearRowTick = 0
 
 		// g.SpawnNewPiece()
-		g.gameState = Playing
+		g.gameState = AwaitingTurn
 	}
+}
+
+// uses RoomBroadcastExcept to send the clear message to all other so that they can do it on their view for the senderID
+func (g *Game) ResolveClear() {
+	if g.gameState != Clearing {
+		return
+	}
+	g.ClearCompleteRows()
+	g.clearRows = nil
+	g.gameState = AwaitingTurn
 }
 
 func (g *Game) SpawnNewPiece(p string) {

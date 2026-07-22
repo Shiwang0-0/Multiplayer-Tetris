@@ -12,7 +12,7 @@ func parseCommand(line string) Command {
 	}
 
 	switch fields[0] {
-	case "LEFT", "RIGHT", "DOWN", "DROP":
+	case "LEFT", "RIGHT", "DOWN", "DROP", "CLEARED":
 		return &moveCommand{move: fields[0]}
 
 	case "CREATE_ROOM":
@@ -43,6 +43,8 @@ func parseCommand(line string) Command {
 		return &startMatchCommand{}
 	case "LOCKED":
 		return &lockedCommand{}
+	case "OUT":
+		return &playerOutCommand{}
 	}
 
 	return nil

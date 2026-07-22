@@ -14,6 +14,8 @@ type model struct {
 	myID int
 
 	screen Screen
+	width  int
+	height int
 
 	// the game state for even the opponent is maintained for each client diffrently i.e no game state is shared and only the moves are shared, and each client replicates that move on their end
 	opponents map[int]*game.Game // each opponent id ---> each opponent game
@@ -23,9 +25,14 @@ type model struct {
 	lastError string
 	connected bool
 
-	voteSecondsLeft int // sets by the server message parsing : deadline field
-	myVote          string
-	activePlayerID  int
+	voteSecondsLeft   int // sets by the server message parsing : deadline field
+	myVote            string
+	activePlayerID    int
+	eliminated        bool
+	eliminationNotice string
+
+	matchOver bool
+	winnerID  int
 }
 
 func NewModel(g *game.Game, conn net.Conn) *model {
@@ -34,5 +41,6 @@ func NewModel(g *game.Game, conn net.Conn) *model {
 		conn:      conn,
 		opponents: make(map[int]*game.Game),
 		screen:    HomeScreen,
+		connected: true,
 	}
 }

@@ -28,6 +28,8 @@ type lockedCommand struct{}
 
 type startMatchCommand struct{}
 
+type playerOutCommand struct{}
+
 func (cmd *moveCommand) execute(cm *ConnectionManager, rm *RoomManager, senderID int) error {
 	roomID, ok := rm.GetRoom(senderID)
 	if !ok {
@@ -105,4 +107,16 @@ func (cmd *startMatchCommand) execute(cm *ConnectionManager, rm *RoomManager, se
 	}
 	rm.StartMatchIfReady(roomID, cm)
 	return nil
+}
+
+func (cmd *playerOutCommand) execute(cm *ConnectionManager, rm *RoomManager, senderID int) error {
+	roomID, ok := rm.GetRoom(senderID)
+	if !ok {
+		return fmt.Errorf("not in a room")
+	}
+	match, ok := rm.GetMatch(roomID)
+	if !ok {
+		return fmt.Errorf("no active match")
+	}
+	return match.OnPlayerOut(senderID, cm, rm)
 }

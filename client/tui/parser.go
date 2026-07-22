@@ -33,6 +33,10 @@ func ParseResponse(line string) tea.Msg {
 		return parseVotingStart(rest)
 	case "TURN_START":
 		return parseTurnStart(rest)
+	case "PLAYER_OUT":
+		return parsePlayerOut(rest)
+	case "MATCH_OVER":
+		return parseMatchOver(rest)
 	case "ERROR":
 		return parseError(rest)
 	default:
@@ -107,6 +111,24 @@ func parseTurnStart(data string) tea.Msg {
 		ActivePlayerID: activePlayerID,
 		Piece:          winnerPiece,
 	}
+}
+
+func parsePlayerOut(data string) tea.Msg {
+	id, err := strconv.Atoi(strings.TrimSpace(data))
+	if err != nil {
+		log.Println("Invalid PLAYER_OUT response")
+		return nil
+	}
+	return protocol.PlayerOutMsg{PlayerID: id}
+}
+
+func parseMatchOver(data string) tea.Msg {
+	winnerID, err := strconv.Atoi(strings.TrimSpace(data))
+	if err != nil {
+		log.Println("Invalid MATCH_OVER response")
+		return nil
+	}
+	return protocol.MatchOverMsg{WinnerID: winnerID}
 }
 
 func parseError(data string) tea.Msg {

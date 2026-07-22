@@ -59,3 +59,21 @@ type TurnStartMsg struct {
 }
 
 func (TurnStartMsg) isMsg() {}
+
+type PlayerLeaveMsg struct {
+	PlayerID int
+}
+
+func (PlayerLeaveMsg) isMsg() {}
+
+type PlayerOutMsg struct {
+	PlayerID int
+}
+
+func (PlayerOutMsg) isMsg() {}
+
+type MatchOverMsg struct {
+	WinnerID int
+}
+
+func (MatchOverMsg) isMsg() {}

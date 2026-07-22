@@ -10,18 +10,14 @@ import (
 )
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if m.game.IsGameOver() {
-		switch msg := msg.(type) {
-		case tea.KeyPressMsg:
-			if msg.String() == "ctrl+c" || msg.String() == "q" {
-				return m, tea.Quit
-			}
-		}
-
-		return m, nil
-	}
 
 	switch msg := msg.(type) {
+
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		return m, nil
+
 	case FallTickMsg:
 		if m.game.GetGameState() == game.Playing {
 			locked := m.game.MoveDown()
@@ -38,9 +34,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case RowClearTickMsg:
 		if m.game.GetGameState() == game.Clearing {
 			m.game.UpdateClearAnimation()
+			if m.game.GetGameState() != game.Clearing {
+				// animation just finished this tick
+				return m, tea.Batch(fallTick(), m.sendCommand("CLEARED"))
+			}
 			return m, clearRowTick()
 		}
-
 		return m, fallTick()
 
 	case tea.KeyPressMsg:
@@ -55,6 +54,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case protocol.VotingStartMsg:
+		if m.eliminated {
+			return m, nil
+		}
 		m.screen = VotingScreen
 		m.activePlayerID = msg.ActivePlayerID
 		m.myVote = ""
@@ -62,13 +64,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, voteCountdownTick()
 
 	case protocol.TurnStartMsg:
+		m.eliminationNotice = ""
 		m.activePlayerID = msg.ActivePlayerID
+
 		if msg.ActivePlayerID == m.myID {
-			m.screen = GameScreen
 			m.game.SpawnNewPiece(msg.Piece)
+			if m.game.IsGameOver() { // represents game of the current player, not t
+				m.eliminated = true
+				m.screen = EliminatedScreen
+				return m, m.sendCommand("OUT")
+			}
+			m.screen = GameScreen
 			return m, fallTick()
 		}
-		m.screen = SpectateScreen
+
 		if m.opponents == nil {
 			m.opponents = map[int]*game.Game{}
 		}
@@ -78,6 +87,9 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.opponents[msg.ActivePlayerID] = opp
 		}
 		opp.SpawnNewPiece(msg.Piece) // keeps the spectated board's piece in sync with the real active board
+		if m.screen != EliminatedScreen {
+			m.screen = SpectateScreen
+		}
 		return m, nil
 
 	case VoteCountdownTickMsg:
@@ -93,9 +105,6 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case protocol.ServerErrorMsg:
 		m.lastError = msg.Msg
-		if m.screen == WaitingScreen && m.lastError != "waiting for more players" {
-			m.screen = HomeScreen
-		}
 		return m, nil
 
 	case protocol.OpponentMoveMsg:
@@ -119,7 +128,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			opp.MoveDown()
 		case "DROP":
 			opp.HardDrop()
+		case "CLEARED":
+			opp.ResolveClear()
 		}
+		return m, nil
+
+	case protocol.PlayerOutMsg:
+		if msg.PlayerID != m.myID {
+			m.eliminationNotice = fmt.Sprintf("Player %d is out!", msg.PlayerID)
+		}
+		return m, nil
+
+	case protocol.MatchOverMsg:
+		m.matchOver = true
+		m.winnerID = msg.WinnerID
+		m.screen = MatchOverScreen
 		return m, nil
 
 	case protocol.DisconnectedMsg:
@@ -149,8 +172,13 @@ func (m model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		return m.handleRoomInput(msg)
 
 	case WaitingScreen:
+		if m.lastError != "" && msg.String() == "esc" {
+			m.screen = HomeScreen
+			m.lastError = ""
+			return m, nil
+		}
 		if !m.isCreator {
-			return m, nil // non-creators just wait for VOTING_START from the server
+			return m, nil
 		}
 		switch msg.String() {
 		case "enter":
@@ -176,6 +204,12 @@ func (m model) handleKeyPress(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if piece != "" && m.myVote == "" {
 			m.myVote = piece
 			return m, m.sendCommand("VOTE " + piece)
+		}
+		return m, nil
+
+	case EliminatedScreen:
+		if msg.String() == "s" {
+			m.screen = SpectateScreen
 		}
 		return m, nil
 	}
@@ -228,6 +262,7 @@ func (m *model) handleRoomInput(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 		if err != nil {
 			return m, nil
 		}
+		m.lastError = ""
 		if m.screen == CreateRoomScreen {
 			m.isCreator = true
 			return m, m.sendCommand("CREATE_ROOM " + m.roomID)
